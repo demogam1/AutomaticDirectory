@@ -1,41 +1,35 @@
-﻿# PowerShell script to promote a server to a Domain Controller and create a new forest
-param (
+﻿param (
     [Parameter(Mandatory = $true)]
-    [string]$DomainAddress,  # Fully Qualified Domain Name (e.g., example.local)
+    [string]$DomainAddress,
 
     [Parameter(Mandatory = $true)]
-    [string]$NetbiosName     # NetBIOS name (e.g., EXAMPLE)
+    [string]$NetbiosName
 )
 
-# Variables
-$ForestFunctionalLevel = "Default"  # Set the desired functional level (e.g., Win2016, Win2019)
-$SafeModeAdminPassword = (ConvertTo-SecureString "Toto42sh@" -AsPlainText -Force)  # Set a strong DSRM password
-
-# Ensure script is running as Administrator
-If (-Not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Please run this script as Administrator." -ForegroundColor Red
-    Exit
+# Check if the script is running as Administrator
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+    Write-Host "This script must be run as an Administrator!" -ForegroundColor Red
+    exit
 }
 
-# Check if AD DS role is installed
-$Feature = Get-WindowsFeature -Name AD-Domain-Services
-if (-not $Feature.Installed) {
-    Write-Host "AD DS role is not installed. Please install it before running this script." -ForegroundColor Red
-    Exit
+# Check if Active Directory Domain Services (AD DS) is installed
+if (-not (Get-WindowsFeature -Name AD-Domain-Services).Installed) {
+    Write-Host "Installing Active Directory Domain Services (AD DS)..." -ForegroundColor Yellow
+    Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
 }
 
-# Promote the server to a Domain Controller and create a new forest
-Write-Host "Promoting server to Domain Controller with Domain Address: $DomainAddress and NetBIOS Name: $NetbiosName" -ForegroundColor Yellow
-Install-ADDSForest -DomainName $DomainAddress `
-    -ForestMode $ForestFunctionalLevel `
-    -DomainMode $ForestFunctionalLevel `
-    -SafeModeAdministratorPassword $SafeModeAdminPassword `
+# Create a new AD Forest
+Write-Host "Creating a new Active Directory Forest..." -ForegroundColor Cyan
+
+Install-ADDSForest `
+    -DomainName $DomainAddress `
     -DomainNetbiosName $NetbiosName `
-    -Force -Verbose
+    -DatabasePath "C:\Windows\NTDS" `
+    -LogPath "C:\Windows\NTDS" `
+    -SysvolPath "C:\Windows\SYSVOL" `
+    -InstallDNS `
+    -NoRebootOnCompletion:$false `
+    -Force:$true `
+    -SafeModeAdministratorPassword (ConvertTo-SecureString "YourSecurePassword123!" -AsPlainText -Force)
 
-# Check if promotion was successful
-if ($? -eq $true) {
-    Write-Host "Server successfully promoted to Domain Controller for the forest: $DomainAddress with NetBIOS Name: $NetbiosName" -ForegroundColor Green
-} else {
-    Write-Host "Failed to promote the server to Domain Controller. Please check the error details." -ForegroundColor Red
-}
+Write-Host "Domain $DomainAddress with NetBIOS name $NetbiosName has been created successfully!" -ForegroundColor Green

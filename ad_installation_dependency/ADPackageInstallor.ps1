@@ -6,7 +6,7 @@ $SafeModeAdminPassword = (ConvertTo-SecureString "Toto42sh@" -AsPlainText -Force
 $StaticIP = "192.168.1.10"  # Set the static IP address for the server
 $SubnetMask = "255.255.255.0"  # Set the subnet mask
 $Gateway = "192.168.1.1"  # Set the default gateway
-$DNSServer = $StaticIP  # Set the DNS server (typically points to this server)
+$DNSServer = "192.168.1.10"  # Set the DNS server (typically points to this server)
 
 # Function to configure network settings
 Function Configure-Network {
@@ -50,9 +50,5 @@ if ($? -eq $true) {
     Exit
 }
 
-# Promote the server to a domain controller
-Write-Host "Configuring the server as a Domain Controller..." -ForegroundColor Yellow
-Install-ADDSForest -DomainName $DomainName -SafeModeAdministratorPassword $SafeModeAdminPassword -Force -Verbose
-
 # Output completion message
-Write-Host "Domain Controller setup completed successfully for domain: $DomainName" -ForegroundColor Green
+Write-Host "Active Directory setup completed successfully for domain: $DomainName" -ForegroundColor Green

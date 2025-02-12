@@ -1,64 +1,48 @@
-﻿param (
-    [string]$DomainAddress = Read-Host "Entrez le nom du domaine complet de la forêt existante"
+﻿# Etape a suivre 
+    # 1-Configurer l'adresse ip en static
+    # 2-Add role [Active Directory Domain Service]
+    # 3-Promote to domain controler by connecting to domolia-ad.corp with following credentials DOMOLIA-AD\Administrator Toto42sh@
+        # with Allow domain controller reinstall with pass toto42sh@
+    # 4-Print all server connected to domain controller with Get-ADDomainController -Filter * | Select-Object Name, Domain, Site
+
+param (
+    [Parameter(Mandatory = $true)]
+    [string]$DomainAddress
+
 )
 
-# Variables
-$StaticIP = "192.168.1.20"  # Adresse IP statique du serveur
-$SubnetMask = "255.255.255.0"  # Masque de sous-réseau
-$Gateway = "192.168.1.1"  # Passerelle par défaut
-$DNSServer = "192.168.1.10"  # Serveur DNS (existant)
-$SafeModeAdminPassword = (ConvertTo-SecureString "Toto42sh@" -AsPlainText -Force)  # Mot de passe DSRM
+# Définition des paramètres réseau
+$StaticIP = "192.168.1.20"
+$SubnetMask = "255.255.255.0"
+$Gateway = "192.168.1.1"
+$DNSServer = "192.168.1.10"
 
-# Vérification des privilèges administrateurs
-If (-Not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "Veuillez exécuter ce script en tant qu'administrateur." -ForegroundColor Red
-    Exit
-}
+# Configuration de l'IP statique
+Write-Host "🔧 Configuration de l'adresse IP statique..."
+$Interface = Get-NetAdapter | Where-Object {$_.Status -eq "Up"}
+New-NetIPAddress -InterfaceIndex $Interface.ifIndex -IPAddress $StaticIP -PrefixLength 24 -DefaultGateway $Gateway
+Set-DnsClientServerAddress -InterfaceIndex $Interface.ifIndex -ServerAddresses $DNSServer
+Write-Host "✅ IP statique configurée: $StaticIP"
 
-# Fonction pour configurer le réseau
-Function Configure-Network {
-    Write-Host "Configuration des paramètres réseau..." -ForegroundColor Yellow
+# Installation du rôle Active Directory Domain Services
+Write-Host "📥 Installation du rôle Active Directory Domain Services..."
+Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
+Write-Host "✅ Rôle AD DS installé avec succès."
 
-    # Récupérer la première carte réseau active
-    $NetAdapter = Get-NetAdapter | Where-Object { $_.Status -eq "Up" } | Select-Object -First 1
+# Création des identifiants sécurisés
+Write-Host "🔑 Création des identifiants pour la promotion..."
+$DomainAdminUser = "DOMOLIA-AD\Administrator"
+$DomainAdminPassword = ConvertTo-SecureString "Toto42sh@" -AsPlainText -Force
+$DomainCreds = New-Object System.Management.Automation.PSCredential ($DomainAdminUser, $DomainAdminPassword)
 
-    if ($NetAdapter -eq $null) {
-        Write-Host "Aucune carte réseau active trouvée. Arrêt du script." -ForegroundColor Red
-        Exit
-    }
+$SafeModePassword = ConvertTo-SecureString "toto42sh@" -AsPlainText -Force
 
-    # Configurer l'adresse IP statique
-    New-NetIPAddress -InterfaceAlias $NetAdapter.Name `
-        -IPAddress $StaticIP `
-        -PrefixLength (32 - [math]::Log([Convert]::ToInt32($SubnetMask.Split('.').Where{$_ -ne '0'}[0]), 2)) `
-        -DefaultGateway $Gateway -Verbose
+# Promotion en tant que contrôleur de domaine
+Write-Host "🚀 Promotion du serveur en tant que contrôleur de domaine..."
+Install-ADDSDomainController -Credential $DomainCreds -DomainName $DomainAddress -InstallDNS -SafeModeAdministratorPassword $SafeModePassword -Force
 
-    # Configurer le serveur DNS
-    Set-DnsClientServerAddress -InterfaceAlias $NetAdapter.Name -ServerAddresses $DNSServer -Verbose
+Write-Host "✅ Le serveur est maintenant un contrôleur de domaine."
 
-    Write-Host "Configuration réseau terminée." -ForegroundColor Green
-}
-
-# Configurer le réseau
-Configure-Network
-
-# Installer le rôle AD DS s'il n'est pas encore installé
-$Feature = Get-WindowsFeature -Name AD-Domain-Services
-if (-not $Feature.Installed) {
-    Write-Host "Installation du rôle AD DS..." -ForegroundColor Yellow
-    Install-WindowsFeature -Name AD-Domain-Services -IncludeManagementTools
-    Write-Host "Installation du rôle AD DS terminée." -ForegroundColor Green
-}
-
-# Promouvoir le serveur en tant que contrôleur de domaine de la forêt existante
-Write-Host "Promotion du serveur en tant que contrôleur de domaine pour la forêt : $DomainAddress" -ForegroundColor Yellow
-Install-ADDSDomainController -DomainName $DomainAddress `
-    -SafeModeAdministratorPassword $SafeModeAdminPassword `
-    -Force -Verbose
-
-# Vérifier si la promotion a réussi
-if ($? -eq $true) {
-    Write-Host "Le serveur a été promu avec succès en tant que contrôleur de domaine pour la forêt : $DomainAddress" -ForegroundColor Green
-} else {
-    Write-Host "Échec de la promotion du serveur en tant que contrôleur de domaine. Veuillez vérifier les erreurs." -ForegroundColor Red
-}
+# Affichage des contrôleurs de domaine
+Write-Host "📡 Liste des contrôleurs de domaine :"
+Get-ADDomainController -Filter * | Select-Object Name, Domain, Site
