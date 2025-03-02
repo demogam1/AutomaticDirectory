@@ -1,0 +1,1 @@
+La syntax du organization unit est la suivante : OU=Domain Controler,DC=domolia-ad,DC=corp
