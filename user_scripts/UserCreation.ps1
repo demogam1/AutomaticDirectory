@@ -19,7 +19,7 @@ $LastName = $NameParts[-1]
 $Email = "$FirstName.$LastName@$DomainName"
 
 # Securely store the default password
-$DefaultPassword = ConvertTo-SecureString "TotalyN0tSecure" -AsPlainText -Force
+$DefaultPassword = Read-Host -Prompt "Enter temporary password" -AsSecureString
 
 # Construct the UserPrincipalName (UPN)
 $UserPrincipalName = $Email.ToLower()

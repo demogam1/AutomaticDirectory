@@ -1,29 +1,3 @@
-<#
-.SYNOPSIS
-    Retrieves information for every Active Directory group in the domain.
-
-.DESCRIPTION
-    This script retrieves all properties for every AD group in the domain.
-    If a property name is provided (either as a parameter or via prompt),
-    only that property is returned for each group.
-    If no property name is provided, the script returns all available properties.
-
-.PARAMETER PropertyName
-    (Optional) The specific property name to display.
-    If not provided as a parameter, the script will prompt for it.
-
-.EXAMPLE
-    .\ReadEveryGroupInformation.ps1
-    Prompts for a property name; if left blank, retrieves and displays all properties for every AD group.
-
-.EXAMPLE
-    .\ReadEveryGroupInformation.ps1 -PropertyName "Description"
-    Retrieves and displays only the "Description" property for every AD group.
-
-.NOTES
-    Requires the ActiveDirectory module. Use Import-Module ActiveDirectory if not already loaded.
-#>
-
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $false)]
