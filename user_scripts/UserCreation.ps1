@@ -52,3 +52,4 @@ try {
 } catch {
     Write-Host "Failed to add $UserPrincipalName to group $DesiredGroup" -ForegroundColor Red
 }
+
