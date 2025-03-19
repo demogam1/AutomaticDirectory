@@ -2,7 +2,6 @@
 
 # Variables
 $DomainName = "domolia-ad.corp"  # Change to your desired domain name
-$SafeModeAdminPassword = (ConvertTo-SecureString "Toto42sh@" -AsPlainText -Force)  # Set a strong password
 $StaticIP = "192.168.1.10"  # Set the static IP address for the server
 $SubnetMask = "255.255.255.0"  # Set the subnet mask
 $Gateway = "192.168.1.1"  # Set the default gateway
